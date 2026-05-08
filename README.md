@@ -230,4 +230,4 @@ Before going live, update these:
 
 
 
-👨‍🎓 Studentshttps://ekagraabhyasika.great-site.net/admin/students.php💺 Seatshttps://ekagraabhyasika.great-site.net/admin/seats.php💰 Paymentshttps://ekagraabhyasika.great-site.net/admin/payments.php📈 Reportshttps://ekagraabhyasika.great-site.net/admin/reports.php🔍 Searchhttps://ekagraabhyasika.great-site.net/admin/search.php🔑 Change Passwordhttps://ekagraabhyasika.great-site.net/admin/change_password.php🚪 Logouthttps://ekagraabhyasika.great-site.net/admin/logout.php
+https://ekagraabhyasika.great-site.net/admin/students.php  https://ekagraabhyasika.great-site.net/admin/seats.php  https://ekagraabhyasika.great-site.net/admin/payments.php https://ekagraabhyasika.great-site.net/admin/reports.php  https://ekagraabhyasika.great-site.net/admin/search.php   https://ekagraabhyasika.great-site.net/admin/change_password.php https://ekagraabhyasika.great-site.net/admin/logout.php
