@@ -1,5 +1,5 @@
 <?php
-session_start();
+ob_start();
 require_once '../includes/db.php';
 if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
 
@@ -299,6 +299,7 @@ include '../includes/header.php';
 <?php
 $chartLabels = json_encode(array_column($chartData, 'month'));
 $chartValues = json_encode(array_column($chartData, 'total'));
+$unreservedFree = $unreservedSeats - $unreservedOccupied;
 $extra_js = "
 <script>
 // Revenue Chart
@@ -328,7 +329,7 @@ new Chart(sctx, {
   type: 'doughnut',
   data: {
     labels: ['Reserved Occ.','Reserved Free','Unreserved Occ.','Unreserved Free'],
-    datasets: [{ data: [{$reservedOccupied},{$reservedAvailable},{$unreservedOccupied},{$unreservedSeats-$unreservedOccupied}], backgroundColor:['#ef5350','#66bb6a','#ffca28','#bdbdbd'], borderWidth:2 }]
+    datasets: [{ data: [{$reservedOccupied},{$reservedAvailable},{$unreservedOccupied},{$unreservedFree}], backgroundColor:['#ef5350','#66bb6a','#ffca28','#bdbdbd'], borderWidth:2 }]
   },
   options: { responsive:true, plugins:{ legend:{display:false} }, cutout:'70%' }
 });

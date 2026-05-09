@@ -1,7 +1,7 @@
 <?php
 // includes/header.php
-// Used by all admin pages. $page_title and $base must be set before including.
-if (session_status() === PHP_SESSION_NONE) session_start();
+// NOTE: db.php already calls session_start(). Never call it again here.
+// $page_title and $base must be set before including this file.
 if (!isset($base)) {
     $base = (
         strpos($_SERVER['PHP_SELF'], '/admin/')   !== false ||

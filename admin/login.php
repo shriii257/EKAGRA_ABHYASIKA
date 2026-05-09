@@ -1,8 +1,10 @@
 <?php
-session_start();
+// admin/login.php
 require_once '../includes/db.php';
 
-if (isset($_SESSION['admin_id'])) { header('Location: dashboard.php'); exit; }
+if (isset($_SESSION['admin_id'])) {
+    redirect('dashboard.php');
+}
 
 $error = '';
 
@@ -17,12 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$username]);
         $admin = $stmt->fetch();
 
-        if ($admin && (password_verify($password, $admin['password']) || $password === $admin['password'])) {
+        if ($admin && password_verify($password, $admin['password'])) {
+            session_regenerate_id(true);
             $_SESSION['admin_id']   = $admin['id'];
             $_SESSION['admin_name'] = $admin['full_name'];
             $_SESSION['admin_user'] = $admin['username'];
             logActivity($pdo, 'Admin Login', $admin['username'], 'Login successful');
-            header('Location: dashboard.php'); exit;
+            redirect('dashboard.php');
         } else {
             $error = 'Invalid username or password.';
             logActivity($pdo, 'Failed Login', $username, 'Invalid credentials attempt');

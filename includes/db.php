@@ -1,7 +1,24 @@
 <?php
 // ============================================================
-// EKAGRA ABHYASIKA - Database Connection (includes/db.php)
+// EKAGRA ABHYASIKA - includes/db.php
+// PHP 8.3 / InfinityFree compatible
 // ============================================================
+
+// ---- 1. Configure session BEFORE ob_start and session_start ----
+if (session_status() === PHP_SESSION_NONE) {
+    $sess_path = __DIR__ . '/../sessions';
+    if (is_dir($sess_path) && is_writable($sess_path)) {
+        session_save_path(realpath($sess_path));
+    }
+    ini_set('session.use_strict_mode', 1);
+    ini_set('session.cookie_httponly', 1);
+    session_start();
+}
+
+// ---- 2. Output buffering AFTER session_start ----
+if (ob_get_level() === 0) {
+    ob_start();
+}
 
 // ---------------- DATABASE CONFIG ----------------
 define('DB_HOST',    'sql201.infinityfree.com');
@@ -11,20 +28,14 @@ define('DB_PASS',    'oKomeUDESQyC2lq');
 define('DB_CHARSET', 'utf8mb4');
 
 // ---------------- WEBSITE CONFIG ----------------
-define('SITE_NAME', 'Ekagra Abhyasika');
-
-// Replace with your actual InfinityFree domain
-define('SITE_URL', 'https://ekagraabhyasika.great-site.net');
-
-// Replace with your real phone number
+define('SITE_NAME',   'Ekagra Abhyasika');
+define('SITE_URL',    'https://ekagraabhyasika.great-site.net');
 define('ADMIN_PHONE', '917000000000');
 
-// Default credentials (for reference)
-// Admin: username = admin
-// Password: Admin@123
-
+// ============================================================
+// PDO CONNECTION
+// ============================================================
 try {
-
     $pdo = new PDO(
         "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET,
         DB_USER,
@@ -33,133 +44,63 @@ try {
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_TIMEOUT            => 10,
         ]
     );
-
 } catch (PDOException $e) {
-
-    die('
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Database Error</title>
-
-        <style>
-
-            body{
-                font-family: Arial, sans-serif;
-                background:#0a1628;
-                color:#fff;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                min-height:100vh;
-                margin:0;
-                text-align:center;
-            }
-
-            .box{
-                background:#0d2b6e;
-                border-radius:16px;
-                padding:48px 40px;
-                max-width:500px;
-                box-shadow:0 10px 30px rgba(0,0,0,0.3);
-            }
-
-            h2{
-                color:#f0a500;
-                margin-bottom:15px;
-            }
-
-            code{
-                background:rgba(255,255,255,0.1);
-                padding:4px 10px;
-                border-radius:6px;
-                font-size:13px;
-            }
-
-        </style>
-
-    </head>
-
-    <body>
-
-        <div class="box">
-
-            <h2>⚠️ Database Connection Failed</h2>
-
-            <p>
-                Please check your database settings in
-                <code>includes/db.php</code>
-            </p>
-
-            <p>
-                <small>' . htmlspecialchars($e->getMessage()) . '</small>
-            </p>
-
-        </div>
-
-    </body>
-    </html>
-    ');
+    ob_end_clean();
+    http_response_code(503);
+    die('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>DB Error</title>
+    <style>body{font-family:Arial,sans-serif;background:#0a1628;color:#fff;display:flex;
+    align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;}
+    .box{background:#0d2b6e;border-radius:16px;padding:48px 40px;max-width:500px;}
+    h2{color:#f0a500;}code{background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:6px;}</style>
+    </head><body><div class="box"><h2>⚠️ Database Connection Failed</h2>
+    <p>Check settings in <code>includes/db.php</code></p>
+    <p><small>' . htmlspecialchars($e->getMessage()) . '</small></p>
+    </div></body></html>');
 }
 
 // ============================================================
 // AUTO EXPIRE STUDENTS
 // ============================================================
-
 try {
-
     $pdo->exec("
-        UPDATE students
-        SET status='expired'
-        WHERE renewal_date < CURDATE()
-        AND status='active'
+        UPDATE students SET status='expired'
+        WHERE renewal_date < CURDATE() AND status='active'
     ");
-
 } catch (Exception $e) {
-
-    // Silent fail during initial setup
-
+    // Silent fail
 }
 
 // ============================================================
 // HELPER FUNCTIONS
 // ============================================================
 
-// ---- Log Admin Activity ----
 function logActivity(PDO $pdo, string $action, string $by, string $details = ''): void
 {
-    $stmt = $pdo->prepare("
-        INSERT INTO activity_logs
-        (action, performed_by, details)
-        VALUES (?, ?, ?)
-    ");
-
-    $stmt->execute([$action, $by, $details]);
+    try {
+        $stmt = $pdo->prepare("INSERT INTO activity_logs (action, performed_by, details) VALUES (?, ?, ?)");
+        $stmt->execute([$action, $by, $details]);
+    } catch (Exception $e) {
+        // Silent fail
+    }
 }
 
-// ---- Escape Output ----
 function e(string $str): string
 {
     return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
 }
 
-// ---- Format Date ----
 function fdate(?string $date, string $format = 'd M Y'): string
 {
-    if (!$date) {
-        return '—';
-    }
-
+    if (!$date) return '—';
     return date($format, strtotime($date));
 }
 
-// ---- Redirect ----
 function redirect(string $url): void
 {
+    if (ob_get_level() > 0) ob_end_clean();
     header("Location: $url");
     exit;
 }
-?>

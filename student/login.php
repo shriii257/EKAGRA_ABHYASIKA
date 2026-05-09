@@ -1,10 +1,10 @@
 <?php
-session_start();
+// student/login.php — FIX: ob_start, db.php handles session_start()
+ob_start();
 require_once '../includes/db.php';
 
-// Redirect if already logged in
 if (isset($_SESSION['student_id'])) {
-    header('Location: dashboard.php'); exit;
+    redirect('dashboard.php');
 }
 
 $error = '';
@@ -21,10 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $student = $stmt->fetch();
 
         if ($student && (password_verify($password, $student['password']) || $password === $student['password'])) {
+            session_regenerate_id(true);
             $_SESSION['student_id']   = $student['id'];
             $_SESSION['student_name'] = $student['full_name'];
             $_SESSION['student_mob']  = $student['mobile'];
-            header('Location: dashboard.php'); exit;
+            redirect('dashboard.php');
         } else {
             $error = 'Invalid mobile number or password.';
         }
@@ -91,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <i class="fas fa-arrow-left me-1"></i>Back to Website
       </a>
     </div>
-
     <div class="mt-4 p-3" style="background:var(--bg-page);border-radius:8px;font-size:12px;color:var(--text-muted);text-align:center;">
       <i class="fas fa-info-circle me-1"></i>
       Use your registered mobile number and the password given by the admin.<br>
