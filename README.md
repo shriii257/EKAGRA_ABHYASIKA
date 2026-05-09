@@ -23,6 +23,7 @@ This project helps study rooms and libraries manage:
 
 [Admin Panel Login](https://ekagraabhyasika.great-site.net/admin/login.php)
 
+Student Login- Mobile NO: 1234567890 Password: User@123
 ---
 
 # 🚀 Features
