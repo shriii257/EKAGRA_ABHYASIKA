@@ -8,11 +8,13 @@ A modern PHP + MySQL based Study Room / Library Management System designed for m
 
 ### Main Website
 
-[EKAGRA ABHYASIKA Official Website](https://ekagraabhyasika.great-site.net/?utm_source=chatgpt.com)
+[EKAGRA ABHYASIKA Official Website](https://ekagraabhyasika.great-site.net/
+
 
 ### Admin Login
 
-[Admin Login Panel](https://ekagraabhyasika.great-site.net/admin/login.php?utm_source=chatgpt.com)
+[Admin Login Panel](https://ekagraabhyasika.great-site.net/admin/login.php
+
 
 ---
 
