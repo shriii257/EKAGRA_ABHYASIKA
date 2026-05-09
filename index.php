@@ -20,6 +20,46 @@ $available  = $totalSeats - $occupied;
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+  <!-- Running Announcement Bar -->
+<div class="announcement-bar">
+  <div class="announcement-track">
+    📢 Admissions Open at Ekagra Abhyasika • Reserved & Unreserved Seats Available • Premium AC Study Library in Undri Pune • Open Daily 6:00 AM – 10:00 PM
+  </div>
+</div>
+
+<style>
+.announcement-bar{
+    width:100%;
+    overflow:hidden;
+    background:linear-gradient(90deg,#0d2b6e,#081631);
+    color:#fff;
+    padding:12px 0;
+    position:sticky;
+    top:0;
+    z-index:99999;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 4px 14px rgba(0,0,0,0.18);
+}
+
+.announcement-track{
+    white-space:nowrap;
+    display:inline-block;
+    padding-left:100%;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:0.5px;
+    animation:scrollAnnouncement 22s linear infinite;
+}
+
+@keyframes scrollAnnouncement{
+    0%{
+        transform:translateX(0);
+    }
+    100%{
+        transform:translateX(-100%);
+    }
+}
+</style>
 
 <!-- Navigation -->
 <nav class="public-nav">
