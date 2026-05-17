@@ -44,6 +44,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <a href="../index.php" target="_blank">
       <i class="fas fa-globe"></i> View Website
     </a>
+    <a href="change_password.php" class="<?php echo $current_page === 'change_password.php' ? 'active' : ''; ?>">
+      <i class="fas fa-key"></i> Change Password
+    </a>
   </nav>
   <div class="sidebar-footer">
     <a href="logout.php">
