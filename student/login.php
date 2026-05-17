@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="mt-4 p-3" style="background:var(--bg-page);border-radius:8px;font-size:12px;color:var(--text-muted);text-align:center;">
       <i class="fas fa-info-circle me-1"></i>
       Use your registered mobile number and the password given by the admin.<br>
-      <strong>Demo:</strong> 9876543210 / Student@123
+      <strong>Demo:</strong> 9579089287 / Password
     </div>
   </div>
 </div>
