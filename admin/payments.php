@@ -25,8 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $student = $pdo->prepare("SELECT renewal_date, status FROM students WHERE id=?");
             $student->execute([$student_id]);
             $s = $student->fetch();
-            $base = ($s['renewal_date'] && strtotime($s['renewal_date']) > time())
-                ? $s['renewal_date'] : date('Y-m-d');
+            // Use payment date as base so renewal extends exactly 1 month from when they paid.
+            // Previously used renewal_date as base which caused 2-month extension for new students
+            // (their renewal_date was already set 1 month ahead at registration time).
+            $base = !empty($pay_date) ? $pay_date : date('Y-m-d');
             $newRenewal = date('Y-m-d', strtotime($base . ' +1 month'));
             $pdo->prepare("UPDATE students SET renewal_date=?, status='active' WHERE id=?")->execute([$newRenewal, $student_id]);
         }
@@ -54,6 +56,7 @@ if ($student_id) {
 if ($filter === 'monthly')    { $where[] = "p.payment_type = 'monthly'"; }
 if ($filter === 'registration') { $where[] = "p.payment_type = 'registration'"; }
 if ($filter === 'deposit')    { $where[] = "p.payment_type = 'deposit'"; }
+if ($filter === 'locker')     { $where[] = "p.payment_type = 'locker'"; }
 if ($filter === 'expiring') {
     // Show students whose renewal is within 7 days - handled separately below
 }
@@ -156,7 +159,7 @@ include '../includes/header.php';
     <!-- Expiring Soon Alert -->
     <?php if(!empty($expiringStudents)): ?>
     <div class="card-panel mb-4">
-      <div class="card-panel-header" style="background:rgba(240,165,0,0.08);">
+      <div class="card-panel-header" style="background:rgba(0,188,212,0.08);">
         <span class="card-panel-title" style="color:var(--warning);"><i class="fas fa-exclamation-triangle me-2"></i>Renewals Due Within 7 Days (<?php echo count($expiringStudents); ?>)</span>
         <button class="btn btn-outline-primary btn-sm" onclick="exportTableToCSV('expiringTable','expiring_renewals.csv')"><i class="fas fa-download me-1"></i>Export</button>
       </div>
@@ -244,6 +247,7 @@ include '../includes/header.php';
               <option value="monthly" <?php echo $filter==='monthly'?'selected':''; ?>>Monthly Fees</option>
               <option value="registration" <?php echo $filter==='registration'?'selected':''; ?>>Registration</option>
               <option value="deposit" <?php echo $filter==='deposit'?'selected':''; ?>>Deposits</option>
+              <option value="locker" <?php echo $filter==='locker'?'selected':''; ?>>Locker</option>
             </select>
           </div>
           <div class="col-md-3">
@@ -278,7 +282,7 @@ include '../includes/header.php';
               <td><span class="badge bg-primary"><?php echo $p['seat_number'] ?? '—'; ?></span></td>
               <td>
                 <?php
-                $typeColors = ['monthly'=>'info','registration'=>'purple','deposit'=>'blue','deposit_refund'=>'red','reservation'=>'yellow'];
+                $typeColors = ['monthly'=>'info','registration'=>'purple','deposit'=>'blue','deposit_refund'=>'red','reservation'=>'yellow','locker'=>'green'];
                 $tc = $typeColors[$p['payment_type']] ?? 'blue';
                 ?>
                 <span class="badge-status <?php echo $tc; ?>"><?php echo ucfirst(str_replace('_',' ',$p['payment_type'])); ?></span>
@@ -329,11 +333,12 @@ include '../includes/header.php';
                 <option value="deposit">Security Deposit</option>
                 <option value="deposit_refund">Deposit Refund</option>
                 <option value="reservation">Reservation Fee</option>
+                <option value="locker">Locker Fee</option>
               </select>
             </div>
             <div class="col-6">
               <label class="form-label">Amount (₹) *</label>
-              <input type="number" name="amount" id="paymentAmount" class="form-control" value="1800" min="1" required>
+              <input type="number" name="amount" id="paymentAmount" class="form-control" value="1200" min="1" required>
             </div>
             <div class="col-6">
               <label class="form-label">Payment Date *</label>
@@ -350,7 +355,7 @@ include '../includes/header.php';
           </div>
           <div class="alert alert-info mt-3" style="font-size:12px;">
             <i class="fas fa-info-circle me-2"></i>
-            Standard rates: Monthly ₹1800 | Registration ₹100 | Deposit ₹300 | Reservation ₹100
+            <strong>Fee Rates:</strong> Monthly ₹1200 (Unreserved) · ₹1300 (Reserved) · ₹1400 (Reserved + Locker) | Registration ₹100 (one-time, non-refundable) | Deposit ₹500 (one-time, refundable on leaving) | Reservation ₹100 | Locker ₹100
           </div>
         </div>
         <div class="modal-footer">
@@ -363,7 +368,7 @@ include '../includes/header.php';
 </div>
 
 <script>
-const amountMap = { monthly:1800, registration:100, deposit:300, deposit_refund:300, reservation:100 };
+const amountMap = { monthly:1200, registration:100, deposit:500, deposit_refund:500, reservation:100, locker:100 };
 function updateAmount(type) {
   document.getElementById('paymentAmount').value = amountMap[type] || '';
 }
