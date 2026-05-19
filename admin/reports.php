@@ -303,7 +303,7 @@ include '../includes/header.php';
               <td><?php echo $m['count']; ?> payments</td>
             </tr>
             <?php endforeach; ?>
-            <tr style="background:rgba(13,43,110,0.05);">
+            <tr style="background:rgba(26,122,46,0.05);">
               <td><strong>Grand Total</strong></td>
               <td><strong style="color:var(--primary);font-size:18px;">₹<?php echo number_format($grandTotal); ?></strong></td>
               <td></td>
@@ -325,7 +325,7 @@ include '../includes/header.php';
         data: {
           labels: <?php echo $cLabels; ?>,
           datasets: [{ label: 'Revenue (₹)', data: <?php echo $cValues; ?>,
-            borderColor: 'var(--primary)', backgroundColor: 'rgba(13,43,110,0.08)',
+            borderColor: 'var(--primary)', backgroundColor: 'rgba(26,122,46,0.08)',
             fill: true, tension: 0.4, pointRadius: 5 }]
         },
         options: {
