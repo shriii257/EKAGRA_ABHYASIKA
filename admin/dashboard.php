@@ -3,39 +3,27 @@ ob_start();
 require_once '../includes/db.php';
 if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
 
-// ---- Dashboard Stats ----
-$totalSeats       = 108;
-$reservedSeats    = 76;
-$unreservedSeats  = 32;
+// ---- Stats ----
+$totalSeats      = 107;  // Physical seats (no seat 108)
+$reservedCapacity   = 76; // max reserved admissions
+$unreservedCapacity = 31; // max unreserved admissions
 
-$reservedOccupied   = $pdo->query("SELECT COUNT(*) FROM seats WHERE seat_type='reserved' AND status='occupied'")->fetchColumn();
-$reservedAvailable  = $reservedSeats - $reservedOccupied;
-$unreservedOccupied = $pdo->query("SELECT COUNT(*) FROM seats WHERE seat_type='unreserved' AND status='occupied'")->fetchColumn();
+// Reserved = students who chose a fixed seat
+$reservedOccupied   = $pdo->query("SELECT COUNT(*) FROM students WHERE seat_type='reserved' AND status='active'")->fetchColumn();
+$unreservedActive   = $pdo->query("SELECT COUNT(*) FROM students WHERE seat_type='unreserved' AND status='active'")->fetchColumn();
+$reservedAvailable  = $reservedCapacity - $reservedOccupied;
 
 $activeStudents  = $pdo->query("SELECT COUNT(*) FROM students WHERE status='active'")->fetchColumn();
 $expiredStudents = $pdo->query("SELECT COUNT(*) FROM students WHERE status='expired'")->fetchColumn();
 $leftStudents    = $pdo->query("SELECT COUNT(*) FROM students WHERE status='left'")->fetchColumn();
 
-$expiringIn7     = $pdo->query("SELECT COUNT(*) FROM students WHERE renewal_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY) AND status='active'")->fetchColumn();
-$expiredToday    = $pdo->query("SELECT COUNT(*) FROM students WHERE renewal_date < CURDATE() AND status='expired'")->fetchColumn();
+$expiringIn7 = $pdo->query("SELECT COUNT(*) FROM students WHERE renewal_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY) AND status='active'")->fetchColumn();
 
-// Monthly revenue (current month)
 $monthRevenue = $pdo->query("SELECT COALESCE(SUM(amount),0) FROM payments WHERE MONTH(payment_date)=MONTH(CURDATE()) AND YEAR(payment_date)=YEAR(CURDATE())")->fetchColumn();
 
-// Recent activity
 $recentActivity = $pdo->query("SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 8")->fetchAll();
-
-// Expiring soon list
-$expiringList = $pdo->query("SELECT full_name, mobile, seat_number, renewal_date FROM students WHERE renewal_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY) AND status='active' ORDER BY renewal_date ASC LIMIT 5")->fetchAll();
-
-// Monthly payment data for chart (last 6 months)
-$chartData = $pdo->query("
-  SELECT DATE_FORMAT(payment_date,'%b %Y') as month, SUM(amount) as total
-  FROM payments
-  WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-  GROUP BY DATE_FORMAT(payment_date,'%Y-%m')
-  ORDER BY MIN(payment_date)
-")->fetchAll();
+$expiringList   = $pdo->query("SELECT full_name,mobile,seat_number,seat_type,renewal_date FROM students WHERE renewal_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(),INTERVAL 7 DAY) AND status='active' ORDER BY renewal_date ASC LIMIT 5")->fetchAll();
+$chartData      = $pdo->query("SELECT DATE_FORMAT(payment_date,'%b %Y') as month, SUM(amount) as total FROM payments WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) GROUP BY DATE_FORMAT(payment_date,'%Y-%m') ORDER BY MIN(payment_date)")->fetchAll();
 
 $page_title = 'Dashboard';
 $base = '../';
@@ -43,9 +31,7 @@ include '../includes/header.php';
 ?>
 <div class="admin-wrapper">
 <?php include '_sidebar.php'; ?>
-
 <div class="main-content">
-  <!-- Topbar -->
   <div class="topbar">
     <div class="topbar-left">
       <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
@@ -64,7 +50,6 @@ include '../includes/header.php';
   </div>
 
   <div class="page-content">
-    <!-- Welcome -->
     <div style="margin-bottom:24px;">
       <h5 style="font-family:var(--font-display);font-weight:700;color:var(--primary);margin:0;">
         Good <?php echo (date('H')<12)?'Morning':((date('H')<17)?'Afternoon':'Evening'); ?>, <?php echo htmlspecialchars($_SESSION['admin_name'] ?? 'Admin'); ?>! 👋
@@ -82,13 +67,13 @@ include '../includes/header.php';
     </div>
     <?php endif; ?>
 
-    <!-- Stat Cards Row 1 -->
+    <!-- Stat Cards -->
     <div class="row g-3 mb-3">
       <div class="col-6 col-md-4 col-xl-2">
         <div class="stat-card">
           <div class="stat-icon blue"><i class="fas fa-chair"></i></div>
           <div class="stat-info">
-            <div class="stat-value" data-target="<?php echo $totalSeats; ?>"><?php echo $totalSeats; ?></div>
+            <div class="stat-value"><?php echo $totalSeats; ?></div>
             <div class="stat-label">Total Seats</div>
           </div>
         </div>
@@ -97,7 +82,7 @@ include '../includes/header.php';
         <div class="stat-card">
           <div class="stat-icon green"><i class="fas fa-users"></i></div>
           <div class="stat-info">
-            <div class="stat-value" data-target="<?php echo $activeStudents; ?>"><?php echo $activeStudents; ?></div>
+            <div class="stat-value"><?php echo $activeStudents; ?></div>
             <div class="stat-label">Active Students</div>
           </div>
         </div>
@@ -106,8 +91,8 @@ include '../includes/header.php';
         <div class="stat-card">
           <div class="stat-icon yellow"><i class="fas fa-lock"></i></div>
           <div class="stat-info">
-            <div class="stat-value"><?php echo $reservedOccupied; ?></div>
-            <div class="stat-label">Reserved Occupied</div>
+            <div class="stat-value"><?php echo $reservedOccupied; ?>/<?php echo $reservedCapacity; ?></div>
+            <div class="stat-label">Reserved Taken</div>
           </div>
         </div>
       </div>
@@ -140,14 +125,13 @@ include '../includes/header.php';
       </div>
     </div>
 
-    <!-- Second row -->
     <div class="row g-3 mb-4">
       <div class="col-6 col-md-3">
         <div class="stat-card">
           <div class="stat-icon blue"><i class="fas fa-user-lock"></i></div>
           <div class="stat-info">
-            <div class="stat-value"><?php echo $reservedSeats; ?></div>
-            <div class="stat-label">Total Reserved</div>
+            <div class="stat-value"><?php echo $reservedOccupied; ?></div>
+            <div class="stat-label">Reserved Students</div>
           </div>
         </div>
       </div>
@@ -155,8 +139,8 @@ include '../includes/header.php';
         <div class="stat-card">
           <div class="stat-icon info"><i class="fas fa-door-open"></i></div>
           <div class="stat-info">
-            <div class="stat-value"><?php echo $unreservedSeats; ?></div>
-            <div class="stat-label">Total Unreserved</div>
+            <div class="stat-value"><?php echo $unreservedActive; ?></div>
+            <div class="stat-label">Unreserved Students</div>
           </div>
         </div>
       </div>
@@ -180,7 +164,6 @@ include '../includes/header.php';
       </div>
     </div>
 
-    <!-- Charts & Lists -->
     <div class="row g-4">
       <!-- Revenue Chart -->
       <div class="col-lg-8">
@@ -195,7 +178,7 @@ include '../includes/header.php';
         </div>
       </div>
 
-      <!-- Seat Status Pie -->
+      <!-- Seat Pie -->
       <div class="col-lg-4">
         <div class="card-panel">
           <div class="card-panel-header">
@@ -205,9 +188,13 @@ include '../includes/header.php';
             <canvas id="seatChart" height="180"></canvas>
             <div class="mt-3">
               <?php
-              $occupied_total = $reservedOccupied + $unreservedOccupied;
-              $free_total = $totalSeats - $occupied_total;
-              $pairs = [['Reserved Occupied',$reservedOccupied,'#ef5350'],['Reserved Free',$reservedAvailable,'#66bb6a'],['Unreserved Occupied',$unreservedOccupied,'#ffca28'],['Unreserved Free',$totalSeats-$reservedSeats-$unreservedOccupied,'#bdbdbd']];
+              $seatsOccupied = $reservedOccupied + $unreservedActive; // both types consume a seat
+              $seatsFree     = $totalSeats - $seatsOccupied;
+              $pairs = [
+                ['Reserved (fixed seat)', $reservedOccupied,  '#1a7a2e'],
+                ['Reserved seats free',   $reservedAvailable, '#66bb6a'],
+                ['Unreserved students',   $unreservedActive,  '#ffca28'],
+              ];
               foreach($pairs as $p): ?>
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <span style="display:flex;align-items:center;gap:8px;font-size:12px;">
@@ -245,7 +232,13 @@ include '../includes/header.php';
                     <div style="font-weight:600;font-size:13px;"><?php echo htmlspecialchars($s['full_name']); ?></div>
                     <div style="font-size:11px;color:var(--text-muted);"><?php echo $s['mobile']; ?></div>
                   </td>
-                  <td><span class="badge bg-primary"><?php echo $s['seat_number']; ?></span></td>
+                  <td>
+                    <?php if($s['seat_type']==='reserved'): ?>
+                      <span class="badge bg-primary"><?php echo $s['seat_number']; ?></span>
+                    <?php else: ?>
+                      <span class="badge bg-secondary">General</span>
+                    <?php endif; ?>
+                  </td>
                   <td>
                     <span style="font-size:12px;color:<?php echo $days<=3?'var(--danger)':'var(--warning)';?>;font-weight:700;">
                       <?php echo date('d M', strtotime($s['renewal_date'])); ?>
@@ -279,9 +272,7 @@ include '../includes/header.php';
                 <div>
                   <div style="font-size:13px;font-weight:600;"><?php echo htmlspecialchars($log['action']); ?></div>
                   <?php if($log['details']): ?><div style="font-size:11px;color:var(--text-muted);"><?php echo htmlspecialchars($log['details']); ?></div><?php endif; ?>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-                    <?php echo date('d M Y, h:i A', strtotime($log['created_at'])); ?>
-                  </div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;"><?php echo date('d M Y, h:i A', strtotime($log['created_at'])); ?></div>
                 </div>
               </div>
               <?php endforeach; ?>
@@ -292,44 +283,31 @@ include '../includes/header.php';
       </div>
     </div>
 
-  </div><!-- /page-content -->
-</div><!-- /main-content -->
-</div><!-- /admin-wrapper -->
+  </div>
+</div>
+</div>
 
 <?php
 $chartLabels = json_encode(array_column($chartData, 'month'));
 $chartValues = json_encode(array_column($chartData, 'total'));
-$unreservedFree = $unreservedSeats - $unreservedOccupied;
 $extra_js = "
 <script>
-// Revenue Chart
 const rctx = document.getElementById('revenueChart').getContext('2d');
 new Chart(rctx, {
   type: 'bar',
   data: {
     labels: {$chartLabels},
-    datasets: [{
-      label: 'Revenue (₹)',
-      data: {$chartValues},
-      backgroundColor: 'rgba(13,43,110,0.8)',
-      borderRadius: 6,
-      borderSkipped: false,
-    }]
+    datasets: [{ label: 'Revenue (₹)', data: {$chartValues}, backgroundColor: 'rgba(26,122,46,0.8)', borderRadius: 6, borderSkipped: false }]
   },
-  options: {
-    responsive:true,
-    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => '₹' + ctx.raw.toLocaleString() } } },
-    scales:{ y:{ beginAtZero:true, ticks:{ callback: v => '₹'+v.toLocaleString() } } }
-  }
+  options: { responsive:true, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => '₹' + ctx.raw.toLocaleString() }}}, scales:{ y:{ beginAtZero:true, ticks:{ callback: v => '₹'+v.toLocaleString() }}}}
 });
 
-// Seat Pie
 const sctx = document.getElementById('seatChart').getContext('2d');
 new Chart(sctx, {
   type: 'doughnut',
   data: {
-    labels: ['Reserved Occ.','Reserved Free','Unreserved Occ.','Unreserved Free'],
-    datasets: [{ data: [{$reservedOccupied},{$reservedAvailable},{$unreservedOccupied},{$unreservedFree}], backgroundColor:['#ef5350','#66bb6a','#ffca28','#bdbdbd'], borderWidth:2 }]
+    labels: ['Reserved (taken)','Reserved (free)','Unreserved students'],
+    datasets: [{ data: [{$reservedOccupied},{$reservedAvailable},{$unreservedActive}], backgroundColor:['#1a7a2e','#66bb6a','#ffca28'], borderWidth:2 }]
   },
   options: { responsive:true, plugins:{ legend:{display:false} }, cutout:'70%' }
 });
