@@ -21,18 +21,16 @@ if (ob_get_level() === 0) {
 }
 
 // ---------------- DATABASE CONFIG ----------------
-$env = parse_ini_file(__DIR__ . '/../.env');
-
-define('DB_HOST',    $env['DB_HOST']);
-define('DB_NAME',    $env['DB_NAME']);
-define('DB_USER',    $env['DB_USER']);
-define('DB_PASS',    $env['DB_PASS']);
-define('DB_CHARSET', $env['DB_CHARSET']);
+define('DB_HOST',    'sql201.infinityfree.com');
+define('DB_NAME',    'if0_41864563_ekagra_db');
+define('DB_USER',    'if0_41864563');
+define('DB_PASS',    'oKomeUDESQyC2lq');
+define('DB_CHARSET', 'utf8mb4');
 
 // ---------------- WEBSITE CONFIG ----------------
 define('SITE_NAME',   'Ekagra Abhyasika');
 define('SITE_URL',    'https://ekagraabhyasika.great-site.net');
-define('ADMIN_PHONE', '9579089287');
+define('ADMIN_PHONE', '917000000000');
 
 // ============================================================
 // PDO CONNECTION
@@ -73,6 +71,47 @@ try {
     ");
 } catch (Exception $e) {
     // Silent fail
+}
+
+// ============================================================
+// VISITOR COUNTER
+// ============================================================
+// Only count on public-facing pages (not admin / student dashboards)
+if (
+    strpos($_SERVER['PHP_SELF'], '/admin/')   === false &&
+    strpos($_SERVER['PHP_SELF'], '/student/') === false
+) {
+    try {
+        // Ensure the table exists (safe if already present)
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS visitor_counter (
+                id         INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                visit_date DATE         NOT NULL,
+                ip_hash    VARCHAR(64)  NOT NULL,
+                created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_ip_day (visit_date, ip_hash)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // One unique visit per IP per day (IP is hashed — never stored raw)
+        $ipHash = hash('sha256', ($_SERVER['HTTP_CF_CONNECTING_IP']
+                    ?? $_SERVER['HTTP_X_FORWARDED_FOR']
+                    ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown') . date('Y-m-d'));
+
+        $pdo->prepare(
+            "INSERT IGNORE INTO visitor_counter (visit_date, ip_hash) VALUES (CURDATE(), ?)"
+        )->execute([$ipHash]);
+    } catch (Exception $e) {
+        // Silent fail — never break the page for a counter
+    }
+}
+
+// Fetch total unique visitor count (used by footer)
+$totalVisitors = 0;
+try {
+    $totalVisitors = (int)$pdo->query("SELECT COUNT(*) FROM visitor_counter")->fetchColumn();
+} catch (Exception $e) {
+    $totalVisitors = 0;
 }
 
 // ============================================================
